@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zeff — Effective Nuclear Charge Calculator</title>
+<meta name="theme-color" content="#0B1D2E">
+<meta name="description" content="Calculate effective nuclear charge (Zeff) for any electron in any element using Slater's Rules.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230B1D2E'/%3E%3Ccircle cx='50' cy='50' r='6' fill='%23F2A65A'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='16' fill='none' stroke='%235FB3B3' stroke-width='3'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='16' fill='none' stroke='%235FB3B3' stroke-width='3' transform='rotate(60 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='16' fill='none' stroke='%235FB3B3' stroke-width='3' transform='rotate(120 50 50)'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B1D2E;
+    --panel: #11283D;
+    --panel-2: #16324B;
+    --grid: #1E4160;
+    --text: #EAF2F8;
+    --text-dim: #8FB0C9;
+    --text-faint: #5A7A93;
+    --amber: #F2A65A;
+    --amber-dim: #6B4A28;
+    --teal: #5FB3B3;
+    --teal-dim: #274B4B;
+    --danger: #E8836B;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    padding: 28px 16px 60px;
+  }
+  .wrap{
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  /* header */
+  header{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--grid);
+  }
+  .orbit-icon{ flex:none; width:52px; height:52px; }
+  header h1{
+    font-size: 1.32rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: 0.01em;
+  }
+  header p{
+    margin:0;
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    line-height:1.5;
+  }
+
+  /* input card */
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--grid);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  .input-row{
+    display:flex;
+    gap:12px;
+    flex-wrap: wrap;
+  }
+  .input-group{
+    flex: 1 1 220px;
+    position:relative;
+  }
+  .input-group label{
+    display:block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  input[type=text], input[type=number]{
+    width:100%;
+    background: var(--bg);
+    border: 1px solid var(--grid);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    padding: 11px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=text]:focus, input[type=number]:focus{
+    border-color: var(--amber);
+  }
+  #zSlider{
+    width:100%;
+    margin-top:10px;
+    accent-color: var(--amber);
+  }
+  .element-readout{
+    margin-top: 14px;
+    display:flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap:wrap;
+  }
+  .element-tile{
+    font-family: var(--font-mono);
+    background: var(--panel-2);
+    border:1px solid var(--grid);
+    border-radius:8px;
+    padding: 10px 16px;
+    text-align:center;
+    min-width: 76px;
+  }
+  .element-tile .z{
+    font-size:0.65rem;
+    color: var(--text-faint);
+  }
+  .element-tile .sym{
+    font-size: 1.5rem;
+    font-weight:700;
+    color: var(--amber);
+    line-height:1.1;
+  }
+  .element-name{
+    font-size: 0.95rem;
+    color: var(--text-dim);
+  }
+  .error-msg{
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 8px;
+    display:none;
+  }
+
+  /* config display */
+  .section-label{
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+  .config-line{
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    line-height: 2.1;
+    word-spacing: 4px;
+    overflow-x:auto;
+    white-space:nowrap;
+    padding-bottom:4px;
+  }
+  .config-line .subshell-btn{
+    display:inline-block;
+    font-family: var(--font-mono);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.95rem;
+    padding: 3px 6px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .config-line .subshell-btn:hover{
+    border-color: var(--grid);
+    background: var(--panel-2);
+  }
+  .config-line .subshell-btn.active{
+    background: var(--amber);
+    color: #1a1206;
+    border-color: var(--amber);
+    font-weight:600;
+  }
+  .group-hint{
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+
+  /* results */
+  .zeff-result{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+    margin-bottom: 18px;
+  }
+  .zeff-big{
+    font-family: var(--font-mono);
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: var(--amber);
+    line-height:1;
+  }
+  .zeff-big sub{ font-size:1.1rem; color: var(--text-dim); }
+  .zeff-formula{
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    color: var(--text-dim);
+  }
+  .zeff-formula .num{ color: var(--text); font-weight:600; }
+
+  table.breakdown{
+    width:100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    margin-top: 6px;
+  }
+  table.breakdown th{
+    text-align:left;
+    color: var(--text-faint);
+    font-weight:600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--grid);
+  }
+  table.breakdown td{
+    padding: 8px 8px;
+    border-bottom: 1px solid var(--grid);
+    color: var(--text);
+  }
+  table.breakdown tr:last-child td{ border-bottom:none; }
+  table.breakdown td.num, table.breakdown th.num{ text-align:right; }
+  table.breakdown tr.total td{
+    font-weight:700;
+    color: var(--amber);
+    border-top: 1px solid var(--grid);
+  }
+
+  /* shell diagram */
+  .shell-wrap{
+    display:flex;
+    justify-content:center;
+    margin: 6px 0 4px;
+  }
+
+  footer{
+    text-align:center;
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    margin-top: 30px;
+    line-height:1.6;
+  }
+  footer a{ color: var(--teal); }
+
+  @media (max-width: 480px){
+    .zeff-big{ font-size: 2.1rem; }
+    header{ flex-direction:column; align-items:flex-start; }
+  }
+
+  @media (prefers-color-scheme: light){
+    /* App is intentionally always dark (blueprint theme); keep consistent regardless of system scheme */
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <svg class="orbit-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="50" cy="50" r="6" fill="var(--amber)"/>
+      <ellipse cx="50" cy="50" rx="40" ry="16" fill="none" stroke="var(--teal)" stroke-width="2.5"/>
+      <ellipse cx="50" cy="50" rx="40" ry="16" fill="none" stroke="var(--teal)" stroke-width="2.5" transform="rotate(60 50 50)"/>
+      <ellipse cx="50" cy="50" rx="40" ry="16" fill="none" stroke="var(--teal)" stroke-width="2.5" transform="rotate(120 50 50)"/>
+    </svg>
+    <div>
+      <h1>Zeff — Effective Nuclear Charge</h1>
+      <p>Enter an atomic number or element symbol, pick an electron, and see the full Slater's Rules breakdown.</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="input-row">
+      <div class="input-group">
+        <label for="elInput">Element symbol or name</label>
+        <input type="text" id="elInput" placeholder="e.g. Cu, Copper" list="elementList" autocomplete="off">
+        <datalist id="elementList"></datalist>
+      </div>
+      <div class="input-group">
+        <label for="zInput">Atomic number (Z)</label>
+        <input type="number" id="zInput" min="1" max="118" placeholder="e.g. 29">
+      </div>
+    </div>
+    <input type="range" id="zSlider" min="1" max="118" value="1">
+    <div class="element-readout">
+      <div class="element-tile">
+        <div class="z" id="tileZ">Z = 1</div>
+        <div class="sym" id="tileSym">H</div>
+      </div>
+      <div class="element-name" id="tileName">Hydrogen</div>
+    </div>
+    <div class="error-msg" id="errorMsg">Not recognized — try an element symbol (Cu), a name (Copper), or a number 1–118.</div>
+  </div>
+
+  <div class="card">
+    <p class="section-label">Ground-state electron configuration — tap an electron to calculate</p>
+    <div class="config-line" id="configLine"></div>
+    <p class="group-hint" id="groupHint"></p>
+  </div>
+
+  <div class="card">
+    <p class="section-label">Result</p>
+    <div class="zeff-result">
+      <div>
+        <div class="zeff-big" id="zeffBig">1.00</div>
+      </div>
+      <div class="zeff-formula" id="zeffFormula"></div>
+    </div>
+    <div class="shell-wrap" id="shellDiagram"></div>
+    <table class="breakdown">
+      <thead>
+        <tr>
+          <th>Electron group</th>
+          <th class="num">Electrons</th>
+          <th class="num">Slater factor</th>
+          <th class="num">Contribution</th>
+        </tr>
+      </thead>
+      <tbody id="breakdownBody"></tbody>
+      <tfoot id="breakdownFoot"></tfoot>
+    </table>
+  </div>
+
+  <footer>
+    Calculations follow Slater's Rules (1930) for approximating effective nuclear charge.<br>
+    Works offline once loaded · installable to your home screen
+  </footer>
+</div>
+
+<script>
+/* =========================================================
+   1. ELEMENT DATA
+   ========================================================= */
+const ELEMENTS = [
+["H","Hydrogen"],["He","Helium"],["Li","Lithium"],["Be","Beryllium"],["B","Boron"],
+["C","Carbon"],["N","Nitrogen"],["O","Oxygen"],["F","Fluorine"],["Ne","Neon"],
+["Na","Sodium"],["Mg","Magnesium"],["Al","Aluminium"],["Si","Silicon"],["P","Phosphorus"],
+["S","Sulfur"],["Cl","Chlorine"],["Ar","Argon"],["K","Potassium"],["Ca","Calcium"],
+["Sc","Scandium"],["Ti","Titanium"],["V","Vanadium"],["Cr","Chromium"],["Mn","Manganese"],
+["Fe","Iron"],["Co","Cobalt"],["Ni","Nickel"],["Cu","Copper"],["Zn","Zinc"],
+["Ga","Gallium"],["Ge","Germanium"],["As","Arsenic"],["Se","Selenium"],["Br","Bromine"],
+["Kr","Krypton"],["Rb","Rubidium"],["Sr","Strontium"],["Y","Yttrium"],["Zr","Zirconium"],
+["Nb","Niobium"],["Mo","Molybdenum"],["Tc","Technetium"],["Ru","Ruthenium"],["Rh","Rhodium"],
+["Pd","Palladium"],["Ag","Silver"],["Cd","Cadmium"],["In","Indium"],["Sn","Tin"],
+["Sb","Antimony"],["Te","Tellurium"],["I","Iodine"],["Xe","Xenon"],["Cs","Caesium"],
+["Ba","Barium"],["La","Lanthanum"],["Ce","Cerium"],["Pr","Praseodymium"],["Nd","Neodymium"],
+["Pm","Promethium"],["Sm","Samarium"],["Eu","Europium"],["Gd","Gadolinium"],["Tb","Terbium"],
+["Dy","Dysprosium"],["Ho","Holmium"],["Er","Erbium"],["Tm","Thulium"],["Yb","Ytterbium"],
+["Lu","Lutetium"],["Hf","Hafnium"],["Ta","Tantalum"],["W","Tungsten"],["Re","Rhenium"],
+["Os","Osmium"],["Ir","Iridium"],["Pt","Platinum"],["Au","Gold"],["Hg","Mercury"],
+["Tl","Thallium"],["Pb","Lead"],["Bi","Bismuth"],["Po","Polonium"],["At","Astatine"],
+["Rn","Radon"],["Fr","Francium"],["Ra","Radium"],["Ac","Actinium"],["Th","Thorium"],
+["Pa","Protactinium"],["U","Uranium"],["Np","Neptunium"],["Pu","Plutonium"],["Am","Americium"],
+["Cm","Curium"],["Bk","Berkelium"],["Cf","Californium"],["Es","Einsteinium"],["Fm","Fermium"],
+["Md","Mendelevium"],["No","Nobelium"],["Lr","Lawrencium"],["Rf","Rutherfordium"],["Db","Dubnium"],
+["Sg","Seaborgium"],["Bh","Bohrium"],["Hs","Hassium"],["Mt","Meitnerium"],["Ds","Darmstadtium"],
+["Rg","Roentgenium"],["Cn","Copernicium"],["Nh","Nihonium"],["Fl","Flerovium"],["Mc","Moscovium"],
+["Lv","Livermorium"],["Ts","Tennessine"],["Og","Oganesson"]
+];
+// Z is index+1
+
+/* =========================================================
+   2. ELECTRON CONFIGURATION ENGINE
+   Ground-state configs generated via Aufbau (n+l, n) rule,
+   with explicit, verified overrides for the known anomalies
+   (Cr, Cu, Nb, Mo, Ru, Rh, Pd, Ag, and the lanthanide/actinide
+   /superheavy block Z=57-118).
+   ========================================================= */
+const lLetter = ['s','p','d','f','g'];
+const capacity = l => 2*(2*l+1);
+
+const _orbitals = [];
+for (let n = 1; n <= 8; n++) for (let l = 0; l <= n-1; l++) _orbitals.push({n,l});
+_orbitals.sort((a,b) => (a.n+a.l)-(b.n+b.l) || a.n-b.n);
+
+function naiveConfig(Z) {
+  let remaining = Z, out = [];
+  for (const o of _orbitals) {
+    if (remaining<=0) break;
+    const fill = Math.min(capacity(o.l), remaining);
+    out.push([o.n,o.l,fill]);
+    remaining -= fill;
+  }
+  return out;
+}
+
+const dBlockExceptions = {
+24: [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,5],[4,0,1]],
+29: [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,10],[4,0,1]],
+41: [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,10],[4,0,2],[4,1,6],[4,2,4],[5,0,1]],
+42: [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,10],[4,0,2],[4,1,6],[4,2,5],[5,0,1]],
+44: [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,10],[4,0,2],[4,1,6],[4,2,7],[5,0,1]],
+45: [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,10],[4,0,2],[4,1,6],[4,2,8],[5,0,1]],
+46: [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,10],[4,0,2],[4,1,6],[4,2,10]],
+47: [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,10],[4,0,2],[4,1,6],[4,2,10],[5,0,1]],
+};
+
+const XeCore = [[1,0,2],[2,0,2],[2,1,6],[3,0,2],[3,1,6],[3,2,10],[4,0,2],[4,1,6],[4,2,10],[5,0,2],[5,1,6]];
+const RnCore = [...XeCore, [4,3,14],[5,2,10],[6,0,2],[6,1,6]];
+
+const beyondXe = {
+57:[[5,2,1],[6,0,2]], 58:[[4,3,1],[5,2,1],[6,0,2]], 59:[[4,3,3],[6,0,2]], 60:[[4,3,4],[6,0,2]],
+61:[[4,3,5],[6,0,2]], 62:[[4,3,6],[6,0,2]], 63:[[4,3,7],[6,0,2]], 64:[[4,3,7],[5,2,1],[6,0,2]],
+65:[[4,3,9],[6,0,2]], 66:[[4,3,10],[6,0,2]], 67:[[4,3,11],[6,0,2]], 68:[[4,3,12],[6,0,2]],
+69:[[4,3,13],[6,0,2]], 70:[[4,3,14],[6,0,2]], 71:[[4,3,14],[5,2,1],[6,0,2]],
+72:[[4,3,14],[5,2,2],[6,0,2]], 73:[[4,3,14],[5,2,3],[6,0,2]], 74:[[4,3,14],[5,2,4],[6,0,2]],
+75:[[4,3,14],[5,2,5],[6,0,2]], 76:[[4,3,14],[5,2,6],[6,0,2]], 77:[[4,3,14],[5,2,7],[6,0,2]],
+78:[[4,3,14],[5,2,9],[6,0,1]], 79:[[4,3,14],[5,2,10],[6,0,1]], 80:[[4,3,14],[5,2,10],[6,0,2]],
+81:[[4,3,14],[5,2,10],[6,0,2],[6,1,1]], 82:[[4,3,14],[5,2,10],[6,0,2],[6,1,2]],
+83:[[4,3,14],[5,2,10],[6,0,2],[6,1,3]], 84:[[4,3,14],[5,2,10],[6,0,2],[6,1,4]],
+85:[[4,3,14],[5,2,10],[6,0,2],[6,1,5]], 86:[[4,3,14],[5,2,10],[6,0,2],[6,1,6]],
+};
+
+const beyondRn = {
+87:[[7,0,1]], 88:[[7,0,2]], 89:[[6,2,1],[7,0,2]], 90:[[6,2,2],[7,0,2]],
+91:[[5,3,2],[6,2,1],[7,0,2]], 92:[[5,3,3],[6,2,1],[7,0,2]], 93:[[5,3,4],[6,2,1],[7,0,2]],
+94:[[5,3,6],[7,0,2]], 95:[[5,3,7],[7,0,2]], 96:[[5,3,7],[6,2,1],[7,0,2]], 97:[[5,3,9],[7,0,2]],
+98:[[5,3,10],[7,0,2]], 99:[[5,3,11],[7,0,2]], 100:[[5,3,12],[7,0,2]], 101:[[5,3,13],[7,0,2]],
+102:[[5,3,14],[7,0,2]], 103:[[5,3,14],[6,2,1],[7,0,2]],
+104:[[5,3,14],[6,2,2],[7,0,2]], 105:[[5,3,14],[6,2,3],[7,0,2]], 106:[[5,3,14],[6,2,4],[7,0,2]],
+107:[[5,3,14],[6,2,5],[7,0,2]], 108:[[5,3,14],[6,2,6],[7,0,2]], 109:[[5,3,14],[6,2,7],[7,0,2]],
+110:[[5,3,14],[6,2,8],[7,0,2]], 111:[[5,3,14],[6,2,9],[7,0,2]], 112:[[5,3,14],[6,2,10],[7,0,2]],
+113:[[5,3,14],[6,2,10],[7,0,2],[7,1,1]], 114:[[5,3,14],[6,2,10],[7,0,2],[7,1,2]],
+115:[[5,3,14],[6,2,10],[7,0,2],[7,1,3]], 116:[[5,3,14],[6,2,10],[7,0,2],[7,1,4]],
+117:[[5,3,14],[6,2,10],[7,0,2],[7,1,5]], 118:[[5,3,14],[6,2,10],[7,0,2],[7,1,6]],
+};
+
+function fullConfig(Z) {
+  if (dBlockExceptions[Z]) return dBlockExceptions[Z];
+  if (Z >= 57 && Z <= 86) return [...XeCore, ...beyondXe[Z]];
+  if (Z >= 87 && Z <= 118) return [...RnCore, ...beyondRn[Z]];
+  return naiveConfig(Z);
+}
+
+// sorted for display: by n asc, then l asc
+function sortedConfig(Z){
+  return fullConfig(Z).slice().sort((a,b)=> a[0]-b[0] || a[1]-b[1]);
+}
+
+/* =========================================================
+   3. SLATER'S RULES ENGINE
+   ========================================================= */
+const groupDefs = [
+ {n:1, ls:[0], label:"1s"},
+ {n:2, ls:[0,1], label:"2s, 2p"},
+ {n:3, ls:[0,1], label:"3s, 3p"},
+ {n:3, ls:[2], label:"3d"},
+ {n:4, ls:[0,1], label:"4s, 4p"},
+ {n:4, ls:[2], label:"4d"},
+ {n:4, ls:[3], label:"4f"},
+ {n:5, ls:[0,1], label:"5s, 5p"},
+ {n:5, ls:[2], label:"5d"},
+ {n:5, ls:[3], label:"5f"},
+ {n:6, ls:[0,1], label:"6s, 6p"},
+ {n:6, ls:[2], label:"6d"},
+ {n:7, ls:[0,1], label:"7s, 7p"},
+];
+function groupIndexOf(n,l){
+  return groupDefs.findIndex(g => g.n===n && g.ls.includes(l));
+}
+
+function computeZeff(Z, targetN, targetL){
+  const cfg = fullConfig(Z);
+  const gIdx = groupIndexOf(targetN, targetL);
+  let ownGroupTotal = 0;
+  for (const [n,l,c] of cfg) if (groupIndexOf(n,l)===gIdx) ownGroupTotal += c;
+  const others = ownGroupTotal - 1;
+
+  const rows = []; // {label, count, factor, contribution}
+  let S = 0;
+
+  if (targetL <= 1) {
+    const coeff = targetN===1 ? 0.30 : 0.35;
+    if (others > 0) {
+      rows.push({label:`Same group (${groupDefs[gIdx].label})`, count: others, factor: coeff, contribution: others*coeff});
+      S += others*coeff;
+    }
+    // (n-1) shell
+    let nm1 = 0;
+    for (const [n,l,c] of cfg) { const gi=groupIndexOf(n,l); if (gi!==gIdx && n===targetN-1) nm1 += c; }
+    if (nm1 > 0) { rows.push({label:`(n\u22121) shell`, count: nm1, factor:0.85, contribution: nm1*0.85}); S += nm1*0.85; }
+    // (n-2) or lower
+    let nm2 = 0;
+    for (const [n,l,c] of cfg) { const gi=groupIndexOf(n,l); if (gi!==gIdx && n<=targetN-2) nm2 += c; }
+    if (nm2 > 0) { rows.push({label:`(n\u22122) or lower`, count: nm2, factor:1.00, contribution: nm2*1.00}); S += nm2*1.00; }
+  } else {
+    if (others > 0) {
+      rows.push({label:`Same group (${groupDefs[gIdx].label})`, count: others, factor:0.35, contribution: others*0.35});
+      S += others*0.35;
+    }
+    let inner = 0;
+    for (const [n,l,c] of cfg) { const gi = groupIndexOf(n,l); if (gi < gIdx) inner += c; }
+    if (inner > 0) { rows.push({label:`All inner groups`, count: inner, factor:1.00, contribution: inner*1.00}); S += inner*1.00; }
+  }
+
+  return { S: round2(S), Zeff: round2(Z - S), rows, gIdx };
+}
+function round2(x){ return Math.round((x + Number.EPSILON) * 100) / 100; }
+
+/* =========================================================
+   4. UI WIRING
+   ========================================================= */
+const elInput = document.getElementById('elInput');
+const zInput = document.getElementById('zInput');
+const zSlider = document.getElementById('zSlider');
+const elementList = document.getElementById('elementList');
+const tileZ = document.getElementById('tileZ');
+const tileSym = document.getElementById('tileSym');
+const tileName = document.getElementById('tileName');
+const errorMsg = document.getElementById('errorMsg');
+const configLine = document.getElementById('configLine');
+const groupHint = document.getElementById('groupHint');
+const zeffBig = document.getElementById('zeffBig');
+const zeffFormula = document.getElementById('zeffFormula');
+const breakdownBody = document.getElementById('breakdownBody');
+const breakdownFoot = document.getElementById('breakdownFoot');
+const shellDiagram = document.getElementById('shellDiagram');
+
+ELEMENTS.forEach(([sym,name])=>{
+  const opt = document.createElement('option');
+  opt.value = `${sym} — ${name}`;
+  elementList.appendChild(opt);
+});
+
+let currentZ = 1;
+let currentTarget = null; // [n,l]
+
+function symbolFor(Z){ return ELEMENTS[Z-1][0]; }
+function nameFor(Z){ return ELEMENTS[Z-1][1]; }
+
+function parseElementInput(raw){
+  const s = raw.trim().toLowerCase();
+  if (!s) return null;
+  const symPart = s.split('—')[0].trim();
+  for (let i=0;i<ELEMENTS.length;i++){
+    const [sym,name] = ELEMENTS[i];
+    if (sym.toLowerCase()===symPart || sym.toLowerCase()===s || name.toLowerCase()===s) return i+1;
+  }
+  return null;
+}
+
+function setZ(Z, opts={}){
+  Z = Math.max(1, Math.min(118, Z));
+  currentZ = Z;
+  errorMsg.style.display = 'none';
+  tileZ.textContent = `Z = ${Z}`;
+  tileSym.textContent = symbolFor(Z);
+  tileName.textContent = nameFor(Z);
+  zSlider.value = Z;
+  if (!opts.skipZInput) zInput.value = Z;
+  if (!opts.skipElInput) elInput.value = `${symbolFor(Z)} — ${nameFor(Z)}`;
+  renderConfig(Z);
+}
+
+function renderConfig(Z){
+  const cfg = sortedConfig(Z);
+  configLine.innerHTML = '';
+  let lastGroup = -1;
+  cfg.forEach(([n,l,c])=>{
+    const gi = groupIndexOf(n,l);
+    if (gi !== lastGroup && lastGroup !== -1) {
+      configLine.appendChild(document.createTextNode('\u2009'));
+    }
+    lastGroup = gi;
+    const btn = document.createElement('button');
+    btn.className = 'subshell-btn';
+    btn.textContent = `${n}${lLetter[l]}${c}`;
+    btn.dataset.n = n; btn.dataset.l = l;
+    btn.addEventListener('click', ()=> selectTarget(n,l));
+    configLine.appendChild(btn);
+  });
+  // choose default target: outermost (highest n, then within that prefer valence s/p over d/f... just pick last in fill order = highest energy = last item in fullConfig, not sortedConfig)
+  const fillOrder = fullConfig(Z);
+  const last = fillOrder[fillOrder.length-1];
+  selectTarget(last[0], last[1]);
+}
+
+function selectTarget(n,l){
+  currentTarget = [n,l];
+  document.querySelectorAll('.subshell-btn').forEach(b=>{
+    b.classList.toggle('active', +b.dataset.n===n && +b.dataset.l===l);
+  });
+  const gi = groupIndexOf(n,l);
+  groupHint.textContent = `Calculating for one ${n}${lLetter[l]} electron — Slater group: (${groupDefs[gi].label})`;
+  renderResult();
+}
+
+function renderResult(){
+  if (!currentTarget) return;
+  const [n,l] = currentTarget;
+  const { S, Zeff, rows } = computeZeff(currentZ, n, l);
+  zeffBig.innerHTML = `Z<sub>eff</sub> = ${Zeff.toFixed(2)}`;
+  zeffFormula.innerHTML = `Z<span class="num">(${currentZ})</span> \u2212 S<span class="num">(${S.toFixed(2)})</span> = <span class="num">${Zeff.toFixed(2)}</span>`;
+
+  breakdownBody.innerHTML = '';
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.label}</td><td class="num">${r.count}</td><td class="num">${r.factor.toFixed(2)}</td><td class="num">${round2(r.contribution).toFixed(2)}</td>`;
+    breakdownBody.appendChild(tr);
+  });
+  breakdownFoot.innerHTML = `<tr class="total"><td colspan="3">Total shielding constant, S</td><td class="num">${S.toFixed(2)}</td></tr>`;
+
+  renderShellDiagram(n,l);
+}
+
+function renderShellDiagram(targetN, targetL){
+  const cfg = sortedConfig(currentZ);
+  const shellsByN = {};
+  cfg.forEach(([n,l,c])=>{ shellsByN[n] = (shellsByN[n]||0)+c; });
+  const ns = Object.keys(shellsByN).map(Number).sort((a,b)=>a-b);
+  const maxN = Math.max(...ns, targetN);
+  const size = 230;
+  const cx = size/2, cy = size/2;
+  const maxR = size/2 - 14;
+  let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+  ns.forEach(n=>{
+    const r = maxR * (n/maxN);
+    const isTargetShell = (n === targetN);
+    const stroke = isTargetShell ? 'var(--amber)' : 'var(--teal)';
+    const opacity = isTargetShell ? '1' : (n < targetN ? '0.85' : '0.35');
+    svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${stroke}" stroke-width="${isTargetShell?2.5:1.5}" opacity="${opacity}" stroke-dasharray="${isTargetShell?'none':'3,3'}"/>`;
+    svg += `<text x="${cx + r + 4}" y="${cy}" fill="var(--text-faint)" font-family="var(--font-mono)" font-size="9">n=${n}</text>`;
+  });
+  svg += `<circle cx="${cx}" cy="${cy}" r="5" fill="var(--amber)"/>`;
+  svg += `</svg>`;
+  shellDiagram.innerHTML = svg;
+}
+
+elInput.addEventListener('input', ()=>{
+  const Z = parseElementInput(elInput.value);
+  if (Z) setZ(Z, {skipElInput:true});
+  else errorMsg.style.display = elInput.value.trim() ? 'block' : 'none';
+});
+zInput.addEventListener('input', ()=>{
+  const v = parseInt(zInput.value,10);
+  if (v>=1 && v<=118) setZ(v, {skipZInput:true});
+});
+zSlider.addEventListener('input', ()=>{
+  setZ(parseInt(zSlider.value,10));
+});
+
+// init
+setZ(29); // start on Copper — a nice non-trivial example
+document.getElementById('elInput').value = 'Cu — Copper';
+
+// register service worker for offline / installability (ignore failures, e.g. file:// context)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
