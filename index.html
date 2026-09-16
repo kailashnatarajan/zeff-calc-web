@@ -714,9 +714,9 @@ function renderShellDiagram(targetN, targetL){
   cfg.forEach(([n,l,c])=>{ shellsByN[n] = (shellsByN[n]||0)+c; });
   const ns = Object.keys(shellsByN).map(Number).sort((a,b)=>a-b);
   const maxN = Math.max(...ns, targetN);
-  const size = 230;
+  const size = 260;
   const cx = size/2, cy = size/2;
-  const maxR = size/2 - 14;
+  const maxR = size/2 - 36;
   let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
   ns.forEach(n=>{
     const r = maxR * (n/maxN);
